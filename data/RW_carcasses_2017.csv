@@ -1,0 +1,18 @@
+Carcass_position,Field # ,Field # ,Response Network Identification Code (if exist) ,Date Observed/ Reported ,NEAq Catalog ID ,Carcass condition at first observation ,Sex ,Age ,Latitude ,Longitude,Location,Recovered? ,Necropsied? ,Necropsy Date ,Last sighting alive prior to death (location)~ ,country,reference,cause of death
+Floating,1+ ,1+ ,MARS2017-136 ,6/6/17,#3746 ,Moderate ,M ,10 yrs ,47.3204,-62.8597,GSL,No ,No ,NA ,4/23/2017 (CCB) ,Canada,Daoust 2017,
+Floating,2,2,MARS2017-141 ,6/19/17,#1402 ,Moderate ,M ,33 yrs ,47.4423,-63.582,GSL,Yes ,Yes ,7/29/16,7/29/2016 (GSL) ,Canada,Daoust 2017,
+Floating,3,3,MARS2017-144 ,6/18/17,#3190 ,Advanced ,M ,>17 yrs ,47.7431,-63.3609,GSL,Yes ,Yes ,7/9/17,4/14/2017 (CCB) ,Canada,Daoust 2017,
+Floating,4,4,MARS2017-143 ,6/21/17,#3603 ,Fresh ,F ,11 yrs ,48.2335,-63.04506,GSL,Yes ,Yes ,7/1/17,4/23/2017 (SNE) ,Canada,Daoust 2017,
+Floating,5* ,5* ,MARS2017-155 ,6/22/17,#3512,Moderate ,F ,12 yrs ,47.1501,-62.4634,GSL,No ,At-sea sampling ,6/22/17,4/24/2017 (CCB) ,Canada,Daoust 2017,
+Floating,6,6,MARS2017-142 ,6/23/17,#1207 ,Moderate ,M ,>37 yrs ,47.61545,-63.22338,GSL,Yes ,Yes ,6/30/17,6/6/2014 (GSC) ,Canada,Daoust 2017,
+Floating,7,7,MARS2017-145 ,7/6/17,Unknown ,Moderate ,M ,Unknown ,47.5832,-62.6267,GSL,Yes ,Yes ,7/10/17,,Canada,Daoust 2017,
+Floating,8,8,MARS2017-14- 6 ,7/19/17,#2140 ,Fresh ,M ,>26 yrs ,47.91702,-63.90859,GSL,Yes ,Yes ,7/21/17,6/27/2017 (GSL) ,Canada,Daoust 2017,
+Floating,9^ ,9^ ,MARS2017-312 ,9/15/17,#4504 ,Moderate ,F ,2 yrs ,48.1503,-63.5009,GSL,Yes ,Yes ,9/19/17,8/7/2015 (GSL) ,Canada,Daoust 2017,
+Beached,10+ ,10+ ,M20170095 ,7/21/17,Unknown ,Advanced ,M ,Unknown ,49.3485,-58.235,"Church Point, Newfoundland",No ,Limited shore sampling ,7/29/17,,Canada,Daoust 2017,
+Beached,12+ ,12+ ,M20170094 ,7/27/17,Unknown ,Advanced ,M ,Unknown ,47.6206,-59.298,"Cape Ray, Newfoundland",No ,Limited shore sampling ,7/30/17,,Canada,Daoust 2017,
+Beached,13+ ,13+ ,F20170093 ,7/30/17,#4111 (based on genetics) ,Advanced ,F ,6 yrs ,50.4263,-57.499,"River of Ponds, Newfoundland",No ,Limited shore sampling ,8/3/17,9/16/2016 (BOF),Canada,Daoust 2017,
+Floating,,,,4/13/17,#4694,Fresh ,F ,1 yr,41.785106,-70.251998,"4nm north Barnstable Harbor, Cape Cod Bay",Yes ,Yes ,,,USA,Pettis 2017 Report Card,Blunt force trauma
+Unknown,,,,8/6/17,Unknown ,Unknown,M ,Unknown ,41.355028,-70.56675,Martha's Vineyard,Yes ,Yes ,,,USA,Pettis 2017 Report Card,Undetermined
+Floating,,,,8/9/17,2123,Unknown,F ,26,41.856594,-67.062572,George's Bank,No ,No ,,,USA,Pettis 2017 Report Card,Undetermined
+Unknown,,,,,,Unknown,,,41.43894,-70.951732,Buzzard's Bay,,,,,USA,NOAA UME 2017,
+Unknown,,,,,,Unknown,,,41.410107,-70.380443,near Martha's Vineyard,,,,,USA,NOAA UME 2017,

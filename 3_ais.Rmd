@@ -1,0 +1,138 @@
+---
+title: "Intersections and distance calculations"
+output: html_document
+---
+
+### Unit 5: Spatial
+#### Lesson 3: AIS ship tracks
+#### New functions: st_crop(), st_make_valid(), st_intersection(), st_drop_geometry()
+
+***
+
+Automatic Identification System (AIS) is an automatic tracking system that uses tranceivers on vessels to detect their location in space and time. AIS is used secondarily to radar to avoid vessel collisions. Large vessels and passenger ships are required to use AIS. The US Bureau of Ocean Energy Management (BOEM) and NOAA provide AIS data collected by the US Coast Guard for free at https://marinecadastre.gov/AIS/
+
+AIS data is huuuuggee!! There are a lot of ships in the water and each ping from an AIS unit is a new row of data. I downloaded AIS data from just the month of January 2017 in UTM Zone 17 (i.e. the US East Coast). This is a 4GB spreadsheet with 31,884,021 rows. This is too big to include in a GitHub repo or to effectively use in class. In the script `ais_reduce.R` I read in the data, cropped it to a bounding box around FL and GA, removed duplicate rows and rows with no vessel `CallSign`, grabbed only vessels with the status "under way using engine", and grabbed just a single day of data (Jan. 25, 2017). Then I wrote this much smaller file (16 MB) out to a `.csv` file that has a more manageable size, but is otherwise equivalent to what you could download directly from the website. 
+
+We can use the AIS data to get a look at the amount of vessel traffic that occurs in the Southeast US North Atlantic right whale critical breeding habitat. Much of this critical habitat has been designated a Seasonal Management Area, where vessels > 65 feet long (20 meters) are required to slow down to < 10 knots during the calving season (from November 15 - April 15 each year). Vessels < 65 feet in length are also encouraged, but not required, to slow down to < 10 knots. NOAA Fisheries issued this ruling to reduce the risk of right whale ship strikes. The AIS data includes ship length (in meters) as well as Heading (direction your ship is pointed at), COG (Course Over Ground - direction your ship is actually heading) and SOG (Speed Over Ground in knots). AIS data from the US Coast Guard uses the NAD83 CRS (EPSG:4269). For more information on AIS variables, see: https://www.navcen.uscg.gov/?pageName=AISMessagesA
+
+Let's start by loading in the subsetted AIS data, the shapefiles for the right whale critical habitat (that we used earlier) and the world coastline data in R's `mapdata` package. We will crop the coastline data to the same bounding box that I used when I reduced the size of the original (huge) AIS data. 
+
+```{r, message=FALSE}
+library(tidyverse)
+library(sf)
+library(mapdata)
+library(marmap)
+library(lubridate)
+```
+
+```{r}
+## AIS data; Downloaded for January 2017, UTM Zone 17
+# https://marinecadastre.gov/AIS/ (not included in data folder bc ~1GB)
+# subsetted to 2017-1-25 data with script ais_reduce.R in this repo
+ais_day = read.csv('data/processed_ais/ais_2017-01-25.csv')
+head(ais_day)
+
+# Coastline data
+lat_bounds = c(25, 34)
+lon_bounds = c( -82, -76)
+world_map = map_data("worldHires", ylim = lat_bounds, xlim = lon_bounds)
+dim(world_map)
+
+#Read in US critical habitat shapefiles 
+# https://www.greateratlantic.fisheries.noaa.gov/educational_resources/gis/data/index.html
+USA_crit_hab = st_read('data/North_Atlantic_Right_Whale_Critical_Habitat/','North_Atlantic_Right_Whale_Critical_Habitat') # reads in set of shapefiles
+```
+
+Now let's plot everything that we loaded up. Note that the AIS data is still quite large, with 119,726 rows. Each row represents a lat/lon coordinate where an AIS signal was emitted. Putting all of these points on a map takes some processing time, but you can significantly speed it up by never actually printing the plot out to the console. Do this by saving the plot to a variable name and using `ggsave()` to write that plot out to a file (like a .pdf, .png or .jpg). Then just open up that file to see your map.
+
+```{r}
+# plot critical habitats and carcass locations
+ais_map_pts = ggplot()+
+  geom_polygon(data = world_map, aes(x = long, y = lat, group = group)) + # add coastline
+  geom_sf(data=USA_crit_hab, alpha = 0.5, color=NA, fill='yellow') +
+  geom_point(data = ais_day, aes(x = LON, y = LAT, color = CallSign)) + 
+  coord_sf(1.3, xlim = lon_bounds, ylim = lat_bounds) + # Crop map edges
+  guides(color=FALSE) +
+  ylab("Latitude") + xlab("Longitude") + theme_classic() 
+
+ais_map_pts
+ggsave(ais_map_pts, filename='figures/ais_pts_2017-01-25.pdf', device="pdf", height=5, width=4)
+```
+
+Now we'll do some analysis. Let's keep only the ship points that intersect with the right whale critical habitat. Then let's figure out whether any of these ships are breaking the law. Are any ships with Length > 65ft (20m) traveling at SOG > 10 knots?
+
+```{r}
+# Find AIS pings that intersect with RW habitat
+Sys.time()
+ships_RW_intersect = ais_day %>%
+  st_as_sf(coords=c("LON", "LAT"), crs=4269) %>% # AIS uses NAD83 CRS
+  st_intersection(USA_crit_hab %>% dplyr::select(geometry)) 
+Sys.time()
+
+law_breakers = ships_RW_intersect %>% 
+  filter(Length > 20, 
+         SOG > 10)
+
+dim(law_breakers)
+summary(law_breakers)
+
+length(unique(law_breakers$CallSign)) # how many law breakers?
+unique(law_breakers$VesselName) # what are their names?
+```
+
+Are you kidding me? We've got nearly 1000 AIS pings from big ships breaking the speed limit on January 25 - the peak of the calving season. 
+
+Now we can convert our AIS points to ship track lines. We can use the `ymd_hms()` function in the `lubridate` package to convert the column `BaseDateTime` into a date/time variable (of type `POSIXct`) that R will actually recognize. Then we can simply use the `arrange()` function in dplyr to sort our data by date/time to make sure they are in chronological order. Once that is done, we can group the AIS points by each vessel's unique `CallSign` and collapse the series of AIS points into ship track lines. Note that arranging the data chronologically and grouping by vessel are critical steps so that the ship tracks make sense.
+
+```{r}
+illegal_paths = law_breakers %>% 
+  mutate(date_time = lubridate::ymd_hms(BaseDateTime)) %>% # date_time is POSIXct class (calendar/time)
+  arrange(date_time) %>% # ensure ship tracks points are in chronological order
+  group_by(CallSign) %>% # essentially groups by call sign but retains length (in meters) info
+  summarise(do_union=FALSE) %>% # collapses data into multipoint; do_union=FALSE prevents reordering points
+  st_cast("LINESTRING") %>%
+  st_make_valid() # gets rid of lines with <2 points
+head(illegal_paths)
+# plot ship tracks
+# illegal_paths_for_plot = illegal_paths[-16,]
+# install.packages("mapview")
+# library(mapview)
+# npts(illegal_paths, by_feature=T)
+# 
+# ggplot() +
+#   geom_sf(data=illegal_paths_for_plot)
+law_breaking_map = ggplot()+
+  geom_polygon(data = world_map, aes(x = long, y = lat, group = group), fill = "black", color = NA) + # add coastline
+  geom_sf(data=USA_crit_hab, alpha = 0.5, color=NA, fill='yellow') +
+  geom_sf(data=illegal_paths, aes(color=CallSign)) +
+  coord_sf(1.3, xlim = lon_bounds, ylim = lat_bounds) + # Crop map edges
+  guides(color="none") +
+  ylab("Latitude") + xlab("Longitude") + theme_classic() 
+
+law_breaking_map
+```
+
+Now that we have converted our AIS points into lines, we can calculate the length of the ships' paths. 
+
+```{r}
+# What are the lengths of the ship tracks that intersected the RW critical habitat?
+illegal_path_lengths = illegal_paths %>%
+  mutate(track_length_m = st_length(geometry)) # Calculate length of ship tracks in meters
+class(illegal_path_lengths$track_length_m) # units class, double type; can convert to numeric with as.numeric()
+tot_illegal_path = sum(illegal_path_lengths$track_length_m)
+tot_illegal_path
+
+# or convert the lengths from units class to numeric class and calculate total track length using dplyr:
+tot_illegal_path = illegal_paths %>%
+  mutate(track_length_m = as.numeric(st_length(geometry))) %>% 
+  summarize(tot_track_length_m = sum(track_length_m)) %>%
+  mutate(tot_track_length_km = tot_track_length_m/1000) %>%
+  st_drop_geometry()
+
+tot_illegal_path
+```
+
+Geeze. 677km of ship tracks illegally zooming through the calving area. If I was presenting this research formally, I'd do a bit more analytical work to remove portions of a ship's track when their speed drops below 10knots by breaking tracks into segments, but as a first pass, this gives us a reasonable picture of compliance to the critical habitat regulations.
+
+You can easily imagine loading the full AIS data set for the breeding season (November - April) and asking these questions across the whole month. Does the ship traffic change between weekdays and weekends? Grab data from other years - does ship traffic change over time? Are higher vessel traffic years associated with more ship strikes, or calving success? What types of vessels enter the critical habitat? How many vessels are compliant to NOAA's <10 knot rule? Which vessels are not compliant? Dive into the history of NOAA policy decisions and public education campaigns. Do these efforts correlate with vessel compliance? Research is cool :)
+
