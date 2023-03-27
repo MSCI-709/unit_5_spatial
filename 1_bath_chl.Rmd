@@ -39,7 +39,7 @@ Since the latter half of the 20th century, satellite remote sensing has become a
 
 - L0: raw data, no geolocation
 - L1: remote sensing reflectance - the light in a given frequency band geolocated to the Earth's surface, after accounting for sensor corrections. 
-- L2: geophysical products - calculate water leaving-radiances after atmospheric corrections have been applied. using documented algorithms, these are scientific variables of interest (i.e. chl, sst, cdom, etc.) that have been estimated from the remote sensing reflectance data collected by the satellite. Gridded data are provided at the resolution observed by the satellite
+- L2: geophysical products - calculate water leaving-radiances after atmospheric corrections have been applied. Using documented algorithms, these are scientific variables of interest (i.e. chl, sst, cdom, etc.) that have been estimated from the remote sensing reflectance data collected by the satellite. Gridded data are provided at the resolution observed by the satellite
 - L3: binned/mapped derived products - this is L2 data that has been binned and mapped to create a gridded product with uniform resolution.
 
 Researchers will access different levels of prodcuts depending on their research interests. Researchers use L0 or L1 products when they are trying to derive new data products, improve existing data products, update atmospheric corrections or develop methods to calibrate derived products across different satellite missions and instruments. Spatial resolutions viewed from satellite are quite irregular, primarily depending on the angle of the satellite from your location of interest at the time of observation. Researchers who are working on fine spatial scales often work with L2 products so they know the exact resolution and positioning of the pixels they are interested in. L3 products are convenient for researchers working at middle- and large- scales that don't need extremely fine scale spatial information. 
@@ -60,19 +60,17 @@ https://urs.earthdata.nasa.gov/
 We can go to the Ocean Data Access Portal:
 https://oceandata.sci.gsfc.nasa.gov/
 
-We can collect data from the Modis Aqua mission, which has been running from 2002-present. (If you want to go a bit farther back in time, you can get some of the same products from the SeaWiFS mission which ran from 1997-2010). We'll grab Modis Aqua L3 Mapped data that provides a monthly climatology of chlorophyll a. So from the Ocean Data Access Portal, click through the directories: 
+and click on the Direct Data Access Portal. We can collect data from the Modis Aqua mission, which has been running from 2002-present. (If you want to go a bit farther back in time, you can get some of the same products from the SeaWiFS mission which ran from 1997-2010). We'll grab Modis Aqua L3 Mapped data that provides a monthly climatology of chlorophyll a. So from the Ocean Data Access Portal, click through the directories: 
 
-`MODIS-Aqua -> Mapped -> Monthly_Climatology -> 9_km -> chlor_a`
+`Level-3 Mapped > Aqua-MODIS > 2002 > 01 Jul 2002 (182)`
 
-There you'll see a list of files with names such as A20021822017212.L3m_MC_CHL_chlor_a_9km.nc  
+There you'll see a list of files with names such as AQUA_MODIS.20020701_20220731.L3m.MC.CHL.chlor_a.9km.nc  
 
 Let's dismantle the file naming convention here: 
 
--  `A`: Satellite sensor (A for the Modis Aqua mission)
--  `2002`: start year
--  `182`: start Julian date (first day of July)
--  `2017`: end year
--  `212`: end Julian date (last day of July)
+-  `AQUA_MODIS`: Satellite sensor (A for the Modis Aqua mission)
+-  `20020701`: start date in the format YYYYMMDD, so July 1, 2002 (Julian date 182)
+-  `20220731`: end date in the format YYYYMMDD, so July 31, 2022
 -  `.L3m`: Level 3 monthly 
 -  `MC`: Monthly Climatology
 -  `CHL`: Chlorophyll suite of products
@@ -83,7 +81,7 @@ Let's dismantle the file naming convention here:
 Note: the OBPG is in the process of transitioning naming conventions:
 https://oceancolor.gsfc.nasa.gov/docs/filenaming-convention/
 
-For this lesson, let's download and play with this file `A20021822017212.L3m_MC_CHL_chlor_a_9km.nc`, which is the monthly climatology of chloropphyll a for July (Julian dates 182-212) averaged across the years 2002 - 2017. This provides chlorophyll a data in $mg/m^3$. This data, and many other products in government DAACs (Distributed Active Archive Centers), comes in a NetCDF file. NetCDF files contain scientific array-type data and associated metadata.
+For this lesson, let's download and play with this file `AQUA_MODIS.20020701_20220731.L3m.MC.CHL.chlor_a.9km.nc`, which is the monthly climatology of chloropphyll a for July 1 through July 31 (Julian dates 182-212) averaged across the years 2002 - 2022. This provides chlorophyll a data in $mg/m^3$. This data, and many other products in government DAACs (Distributed Active Archive Centers), comes in a NetCDF file. NetCDF files contain scientific array-type data and associated metadata.
 
 ```{r, message=FALSE}
 library(tidyverse)
@@ -98,8 +96,10 @@ We can use R's `raster` package to read in the NetCDF file and take a look at th
 ```{r}
 # Modis Aqua monthly climatology of chlor_a for July (Julian dates 182-212) averaged over 2002 - 2017
 # https://oceandata.sci.gsfc.nasa.gov/
-# Data: Modis Aqua -> Mapped -> Monthly Climatology -> 9km -> chlor_a
-chl_raster = raster('data/A20021822017212.L3m_MC_CHL_chlor_a_9km.nc') # chl_a in mg/m^3 # raster reads in the largest array by default
+# Direct Data Access: Level-3 Mapped -> Aqua-MODIS > 2002 > 182 
+# chl_raster = raster('data/A20021822017212.L3m_MC_CHL_chlor_a_9km.nc') # old filenaming convention
+chl_raster = raster('data/AQUA_MODIS.20020701_20220731.L3m.MC.CHL.chlor_a.9km.nc')
+# chl_a in mg/m^3 # raster reads in the largest array by default
 
 # Examine data
 class(chl_raster)
@@ -110,10 +110,14 @@ names(chl_raster) = "chl_a" # Easier to type!
 
 # convert to data frame
 chl_pts = raster::rasterToPoints(chl_raster, spatial = TRUE) # convert to SpatialPointsDataFrame
-chl_df  = data.frame(chl_pts)
+# class(chl_pts)
+# head(chl_pts)
+chl_df  = data.frame(chl_pts) # explicitly converts spatial data (lat & lon) into columns 
 head(chl_df)
 
 # See range of data to set good limits for color palette
+hist(chl_df$chl_a)
+max(chl_df$chl_a)
 hist(log10(chl_df$chl_a))
 cols = rainbow(7, rev=TRUE)[-1] # reverse rainbow color hex codes, drops the first color (purple); 
 
@@ -121,9 +125,9 @@ cols = rainbow(7, rev=TRUE)[-1] # reverse rainbow color hex codes, drops the fir
 # geom_raster() plots faster, geom_tile() is slightly more precise
 global_chl_map = ggplot() +
   geom_raster(data = chl_df , aes(x = x, y = y, fill = log10(chl_a))) + # chl_a typically viewed on log scale
+  scale_fill_gradientn(colors = cols, limits=c(-1.5, 0.75), name="log_10(chl_a)") +
   ggtitle("Global chl_a July climatology") +
-  theme_classic() +
-  scale_fill_gradientn(colors = cols, limits=c(-1.5, 0.75), name="log_10(chl_a)")
+  theme_classic()
 
 global_chl_map # Print to screen
 ggsave(global_chl_map, filename='figures/global_chl_July.pdf', device="pdf", height=5, width=9)
@@ -147,25 +151,26 @@ head(chl_GOM_df)
 chl_GOM_df = chl_GOM_df %>% dplyr::select(-optional) # drop the optional column
 
 # Grab coastline data from R's worldHires data in the mapdata package:
-world_map = map_data("worldHires")
+world_map = map_data("worldHires") # from mapdata package
 head(world_map)
 # Or use GSHHS Shore line maps for higher resolution data:
+# https://www.ngdc.noaa.gov/mgg/shorelines/gshhs.html
 # https://eriqande.github.io/2014/12/17/compare-map-resolutions.html
 
 GOM_chl_map = ggplot() +
   geom_raster(data = chl_GOM_df , aes(x = x, y = y, fill = log10(chl_a))) + # geom_tile() gives more precise lines
   geom_polygon(aes(x=long, y = lat, group = group), fill = "darkgrey", data=world_map) + # add coastline
   coord_fixed(1.3, xlim = lon_bounds, ylim = lat_bounds, expand=FALSE) + # crop map; 1.3 y/x aspect ratio (may want to use higher at the poles; use 1 near the equator)
+  scale_fill_gradientn(colors = cols, limits=c(-1, 1.75)) + # Note I changed color limits from global
   ggtitle("GOM chl_a July climatology") +
   theme_bw() +
-  xlab("Longitude") + ylab("Latitude") +
-  scale_fill_gradientn(colors = cols, limits=c(-1, 1.75))  # Note I changed color limits from global
+  xlab("Longitude") + ylab("Latitude") 
 
 GOM_chl_map # print to screen
 ggsave(GOM_chl_map, filename='figures/GOM_chl_July.pdf', device="pdf", height=5, width=7)
 ```
 
-Now we've got a nice cropped image of the Gulf of Maine with coastlines and the monthly climatology for log chlorophyll in $mg/m^3$ for the month of July from 2002-2017. Note that geom_raster makes a nice smooth image, but if you use `geom_tile()` you'll see a more pixelated (more honest) map of the chlorophyll data, and this may be what you should use in your map, depending on the level of precision you need. We could have downloaded the 4km resolution data instead, and it would have just taken a few more seconds to process. If I was putting this in a publication, I'd grab the 4km resolution and use geom_tile().
+Now we've got a nice cropped image of the Gulf of Maine with coastlines and the monthly climatology for log chlorophyll in $mg/m^3$ for the month of July from 2002-present. Note that geom_raster makes a nice smooth image, but if you use `geom_tile()` you'll see a more pixelated (more honest) map of the chlorophyll data, and this may be what you should use in your map, depending on the level of precision you need. We could have downloaded the 4km resolution data instead, and it would have just taken a few more seconds to process. If I was putting this in a publication, I'd grab the 4km resolution and use geom_tile().
 
 Using the same exact steps, you could grab daily or monthly values for a specific year corresponding to the time period of some other data that you have collected. You could grab the July monthly data each year (rather than the monthly climatology averaged across all years) to see how chlorophyll has changed over time. You could also grab sea surface temperature or a host of other data products from the same website as well. It's that freaking easy.
 
@@ -192,7 +197,7 @@ bath_m_raw = marmap::getNOAA.bathy(lon1 = lon_bounds[1],
                                    resolution = 4) # resolution default: 4 minutes
 class(bath_m_raw)  # "bathy" class (from marmap)
 # convert bathymetry to data frame
-bath_m_df = marmap::fortify.bathy(bath_m_raw) 
+bath_m_df = marmap::fortify.bathy(bath_m_raw) # positive values are land, negative values are sea
 bath_m = bath_m_df %>%
   mutate(depth_m = ifelse(z>20, NA, z)) %>% # 20m gives us wiggle room from sea level for tides/coastline
   dplyr::select(-z)
@@ -202,7 +207,7 @@ summary(bath_m)
 # plot raster data
 GOM_bath_map = ggplot()+
   geom_raster(data = bath_m , aes(x = x, y = y, fill = depth_m)) + 
-  geom_polygon(data = world_map, aes(x = long, y = lat, group = group), fill = "darkgrey", color = NA) + # add coastline; group keeps multipolygon coordinates separated into distinct groups
+  geom_polygon(data = world_map, aes(x = long, y = lat, group = group), fill = "darkgrey", color = "black") + # add coastline; group keeps multipolygon coordinates separated into distinct groups # color=NA
   coord_fixed(1.3, xlim = lon_bounds, ylim = lat_bounds, expand=FALSE) + # Crop map edges
   scale_fill_gradientn(colors=c("black", "darkblue", "lightblue"), 
                        values = scales::rescale(c(-6000, -300, 0)), # rescale to make 2 different gradients (rescale function from scales package in tidyverse)
@@ -218,9 +223,9 @@ For bathymetry data, it can be nice to add contour lines to the plot:
 ```{r}
 # plot contours
 GOM_bath_map_contours = ggplot()+
-  geom_contour(data = bath_m, aes(x=x, y=y, z=depth_m), breaks=c(-100), size=c(0.25), colour="grey") + # add 100m contour
-  geom_contour(data = bath_m, aes(x=x, y=y, z=depth_m), breaks=c(-200), size=c(0.5), colour="grey") + # add 250m contour
-  geom_contour(data = bath_m, aes(x=x, y=y, z=depth_m), breaks=c(-500), size=c(0.75), colour="grey") + # add 250m contour
+  geom_contour(data = bath_m, aes(x=x, y=y, z=depth_m), breaks=c(-100), linewidth=c(0.25), colour="grey") + # add 100m contour
+  geom_contour(data = bath_m, aes(x=x, y=y, z=depth_m), breaks=c(-200), linewidth=c(0.5), colour="grey") + # add 250m contour
+  geom_contour(data = bath_m, aes(x=x, y=y, z=depth_m), breaks=c(-500), linewidth=c(0.75), colour="grey") + # add 250m contour
   geom_polygon(data = world_map, aes(x = long, y = lat, group = group), fill = "black", color = NA) + # add coastline
   coord_fixed(1.3, xlim = lon_bounds, ylim = lat_bounds, expand=FALSE) + # Crop map edges
   ylab("Latitude") + xlab("Longitude") + theme_classic()
@@ -244,9 +249,9 @@ We have downloaded and created gorgeous maps with NASA chlorophyll a data and NO
 ```{r}
 # The GOM cropped data we made above:
 class(chl_GOM_raster)
-class(bath_m_raw)  # "bathy" class (from marmap)
 
 # convert bathymetry to raster
+class(bath_m_raw)  # "bathy" class (from marmap)
 bath_m_raster = marmap::as.raster(bath_m_raw)
 
 # Note the CRS is the same for both rasters WGS84
